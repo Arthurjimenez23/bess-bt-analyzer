@@ -4,89 +4,7 @@
 <!-- PASSWORD GATE -->
 <style id="gate-css">
 #gate{position:fixed;inset:0;z-index:99999;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif}
-#gate-box{background:#fff;border-radius:12px;padding:32px 28px;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}
-#gate-box h2{font-size:16px;color:#1a1a2e;margin-bottom:4px}
-#gate-box p{font-size:11px;color:#999;margin-bottom:16px}
-#gate-box input{width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:6px;font-size:14px;text-align:center;outline:none;transition:border .2s}
-#gate-box input:focus{border-color:#1a1a2e}
-#gate-box button{margin-top:10px;padding:10px 24px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;width:100%;transition:background .2s}
-#gate-box button:hover{background:#2a3a5e}
-#gate-err{color:#dc2626;font-size:11px;margin-top:8px;display:none}
-#app-content{display:none}
-</style>
-<script>
-var PWH='0d68c95206829ea932f35e103ba5b826e84c5f62fbe99c1a460d938339aebd45';
-async function sha256(m){var e=new TextEncoder().encode(m);var h=await crypto.subtle.digest('SHA-256',e);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-async function unlock(){
-  var pw=document.getElementById('gate-pw').value;
-  var h=await sha256(pw);
-  if(h===PWH){
-    document.getElementById('gate').style.display='none';
-    document.getElementById('app-content').style.display='block';
-    document.getElementById('gate-css').remove();
-    sessionStorage.setItem('bess-auth','1');
-  }else{
-    var e=document.getElementById('gate-err');e.textContent='Mot de passe incorrect';e.style.display='block';
-    document.getElementById('gate-pw').value='';document.getElementById('gate-pw').focus();
-  }
-}
-window.addEventListener('DOMContentLoaded',function(){
-  if(sessionStorage.getItem('bess-auth')==='1'){
-    document.getElementById('gate').style.display='none';
-    document.getElementById('app-content').style.display='block';
-    document.getElementById('gate-css').remove();
-  }
-  document.getElementById('gate-pw').addEventListener('keydown',function(e){if(e.key==='Enter')unlock()});
-});
-</script>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BESS BT — Qualification Parcelle</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>if(typeof L==='undefined')document.write('<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/scr'+'ipt>')</script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;color:#333}
-.w{max-width:960px;margin:0 auto;padding:14px}
-h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
-.sub{text-align:center;font-size:10px;color:#999;margin-bottom:10px}
-.row{display:flex;gap:6px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
-.row label{font-size:9px;font-weight:700;color:#999;text-transform:uppercase;display:block;margin-bottom:1px}
-.row input,.row select{padding:7px 8px;border:1px solid #ccc;border-radius:5px;font-size:12px}
-.row .g{flex:2;min-width:180px}.row .g input{width:100%;font-weight:600}
-.row .s{width:80px}.row .s input,.row .s select{width:100%}
-.go{padding:7px 16px;background:#1a1a2e;color:#fff;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:12px;transition:background .2s}
-.go:hover{background:#2a3a5e}.go:disabled{background:#aaa;cursor:wait}
-
-/* Progress bar */
-#prog-wrap{display:none;margin-bottom:8px}
-#prog-bar{height:3px;background:#e0e0e0;border-radius:2px;overflow:hidden}
-#prog-fill{height:100%;width:0%;background:linear-gradient(90deg,#1a1a2e,#3b82f6);border-radius:2px;transition:width .3s ease}
-#st{text-align:center;font-size:11px;color:#999;min-height:16px;margin-bottom:2px}
-
-#err{color:#c00;text-align:center;font-size:12px;display:none;margin-bottom:6px;padding:8px;background:#fff0f0;border-radius:6px}
-
-/* Location banner */
-#loc{display:none;padding:8px 12px;background:#fff;border-radius:6px;margin-bottom:8px;font-size:11px;color:#555;border:1px solid #e0e0e0}
-#loc strong{color:#1a1a2e}
-#loc .addr{font-size:10px;color:#999}
-
-#mw{position:relative;display:none;margin-bottom:10px}
-#map{width:100%;height:460px;border-radius:8px;border:2px solid #ccc}
-.leg{position:absolute;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,.93);border-radius:6px;padding:6px 10px;font-size:10px;box-shadow:0 1px 6px rgba(0,0,0,.15)}
-.leg div{display:flex;align-items:center;gap:4px;margin:1px 0}
-.leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
-
-#vd{display:none;padding:12px;border-radius:6px;margin-bottom:10px;font-size:13px;text-align:center;font-weight:700}
-.g4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;display:none}
-@media(max-width:600px){.g4{grid-template-columns:1fr}}
-.c{background:#fff;border-radius:6px;padding:12px;border-left:4px solid #ccc}
-.c h3{font-size:12px;font-weight:700;margin-bottom:4px}
-.c .t{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-bottom:4px}
-.tok{background:#d4edda;color:#155724}.tko{background:#f8d7da;color:#721c24}.twn{background:#fff3cd;color:#856404}.tabf{background:#f3e8ff;color:#6b21a8}
-.c p{font-size:11px;color:#666;line-height:1.4;margin:2px 0}
+#gate-box{background:#fff;border-radius:12px;padding:32px 28px;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}4;margin:2px 0}
 .c a{font-size:10px;color:#1a1a2e}
 .c .detail{font-size:10px;color:#888;margin-top:3px;padding-top:3px;border-top:1px solid #f0f0f0}
 
@@ -140,15 +58,16 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 <div id="vd"></div>
 <div class="info-box" id="icpe-box"></div>
 <div class="info-box" id="urba-box"></div>
+<div class="info-box" id="georisques-box"></div>
 <div class="g4" id="g4"></div>
 <div class="plu-box" id="plu-box"></div>
 <div class="lk" id="lk"></div>
-<p class="fn" id="fn" style="display:none">Sources : API Carto IGN (GPU, Cadastre) · BAN · Georisques/GASPAR · OSM — Analyse indicative, consultez le service urbanisme.</p>
+<p class="fn" id="fn" style="display:none">Sources : API Carto IGN (GPU, Cadastre) · BAN · Georisques (GASPAR, Radon, CatNat, SIS, Cavites, MVT) · OSM — Analyse indicative, consultez le service urbanisme.</p>
 </div>
 
 <script>
 var map;
-var STEPS=7,curStep=0;
+var STEPS=8,curStep=0;
 
 /* Fetch with timeout + abort */
 async function J(u){try{var c=new AbortController(),t=setTimeout(function(){c.abort()},15000);var r=await fetch(u,{signal:c.signal});clearTimeout(t);if(!r.ok)return null;return await r.json()}catch(e){return null}}
@@ -239,7 +158,7 @@ async function run(){
   document.getElementById('err').style.display='none';
   document.getElementById('prog-wrap').style.display='';
   prog(0);
-  ['vd','g4','lk','fn','plu-box','loc','icpe-box','urba-box'].forEach(function(id){document.getElementById(id).style.display='none'});
+  ['vd','g4','lk','fn','plu-box','loc','icpe-box','urba-box','georisques-box'].forEach(function(id){document.getElementById(id).style.display='none'});
   document.getElementById('g4').innerHTML='';
 
   try{
@@ -385,8 +304,19 @@ async function run(){
     st('Risques naturels (GASPAR)...');prog(5);
     var gaspar=commune?await J('https://georisques.gouv.fr/api/v1/gaspar/risques?code_insee='+commune+'&rayon=0'):null;
 
-    /* ── Step 6: CLASSIFY ── */
-    st('Classification des resultats...');prog(6);
+    /* ── Step 6: GEORISQUES APIs (parallel) ── */
+    st('Georisques : radon, CatNat, cavites, sols pollues, seisme...');prog(6);
+    var latlon=lat+','+lon;
+    var [grRadon,grCatnat,grSIS,grCavites,grMVT]=await Promise.all([
+      commune?J('https://georisques.gouv.fr/api/v1/radon?code_insee='+commune):null,
+      commune?J('https://georisques.gouv.fr/api/v1/catnat?code_insee='+commune+'&limit=10'):null,
+      J('https://georisques.gouv.fr/api/v1/resultats_sis?latlon='+latlon+'&rayon=500'),
+      J('https://georisques.gouv.fr/api/v1/cavites?latlon='+latlon+'&rayon=1000'),
+      J('https://georisques.gouv.fr/api/v1/mvt?latlon='+latlon+'&rayon=1000')
+    ]);
+
+    /* ── Step 7: CLASSIFY ── */
+    st('Classification des resultats...');prog(7);
     var ppri=[],abf=[],cst=[],docs=[],risks=[];
     var seenPpri={},seenAbf={},seenCst={},seenDoc={};
     if(reglUrl){docs.push(reglUrl);seenDoc[reglUrl]=true}
@@ -457,8 +387,8 @@ async function run(){
     lg.innerHTML=lh;
     document.getElementById('mw').appendChild(lg);
 
-    /* ── Step 7: RENDER ── */
-    st('');prog(7);
+    /* ── Step 8: RENDER ── */
+    st('');prog(8);
 
     /* VERDICT */
     var ppriOk=ppri.length===0,abfOk=abf.length===0,pluOk=zi&&zi.ok===1,cstOk=cst.length===0;
@@ -485,6 +415,88 @@ async function run(){
       '<span class="tag '+disp.color+'">'+(disp.ok?'Dispense':'Requis')+'</span> '+disp.label+
       '<br><span style="font-size:10px;color:#888">'+disp.detail+'</span>';
     urbaEl.style.display='';
+
+    /* Georisques box */
+    var grEl=document.getElementById('georisques-box');
+    var grH='<h4 style="font-size:12px;margin-bottom:6px">\ud83c\udf0d Rapport Georisques \u2014 '+comLabel+'</h4>';
+    var grItems=[];
+
+    /* Radon */
+    if(grRadon&&grRadon.data&&grRadon.data.length>0){
+      var rd=grRadon.data[0];
+      var rniv=rd.classe_potentiel||rd.classement||'?';
+      var rlab=rniv<=1?'Faible':rniv==2?'Moyen':'Eleve';
+      var rcol=rniv<=1?'tag-ok':rniv==2?'tag-warn':'tag-ko';
+      grItems.push('<div style="margin:4px 0"><span class="tag '+rcol+'">Radon '+rniv+'/3</span> Potentiel radon : <strong>'+rlab+'</strong></div>');
+    }else{
+      grItems.push('<div style="margin:4px 0"><span class="tag tag-ok">Radon</span> Donnee non disponible</div>');
+    }
+
+    /* CatNat */
+    if(grCatnat&&grCatnat.data&&grCatnat.data.length>0){
+      var cnTotal=grCatnat.data.length;
+      var cnInond=0,cnSec=0,cnOther=0;
+      grCatnat.data.forEach(function(c){
+        var lib=(c.libelle_risque_jo||'').toLowerCase();
+        if(lib.indexOf('inondation')>-1||lib.indexOf('crue')>-1)cnInond++;
+        else if(lib.indexOf('secheresse')>-1||lib.indexOf('rehydratation')>-1)cnSec++;
+        else cnOther++;
+      });
+      var cnCol=cnTotal>8?'tag-ko':cnTotal>3?'tag-warn':'tag-ok';
+      var cnDet=[];
+      if(cnInond>0)cnDet.push(cnInond+' inondation'+(cnInond>1?'s':''));
+      if(cnSec>0)cnDet.push(cnSec+' secheresse'+(cnSec>1?'s':''));
+      if(cnOther>0)cnDet.push(cnOther+' autre'+(cnOther>1?'s':''));
+      grItems.push('<div style="margin:4px 0"><span class="tag '+cnCol+'">CatNat '+cnTotal+'</span> Arretes catastrophe naturelle : <strong>'+cnTotal+'</strong> ('+cnDet.join(', ')+')</div>');
+      /* Show last 3 CatNat */
+      var last3=grCatnat.data.slice(0,3);
+      var cnSub='<div style="font-size:9px;color:#888;margin-left:8px">';
+      last3.forEach(function(c){
+        var d1=c.date_debut_evt||'';var d2=c.date_fin_evt||'';
+        cnSub+='\u2022 '+(c.libelle_risque_jo||'?');
+        if(d1)cnSub+=' ('+d1.substring(0,10)+(d2&&d2!==d1?' \u2192 '+d2.substring(0,10):'')+')';
+        cnSub+='<br>';
+      });
+      if(cnTotal>3)cnSub+='... et '+(cnTotal-3)+' autre(s)';
+      cnSub+='</div>';
+      grItems.push(cnSub);
+    }else{
+      grItems.push('<div style="margin:4px 0"><span class="tag tag-ok">CatNat 0</span> Aucun arrete de catastrophe naturelle</div>');
+    }
+
+    /* SIS (sols pollues) */
+    if(grSIS&&grSIS.data&&grSIS.data.length>0){
+      grItems.push('<div style="margin:4px 0"><span class="tag tag-ko">SIS '+grSIS.data.length+'</span> <strong>Secteur d\'information sur les sols</strong> dans un rayon de 500m \u2014 sols potentiellement pollues</div>');
+      grSIS.data.slice(0,2).forEach(function(s){
+        grItems.push('<div style="font-size:9px;color:#888;margin-left:8px">\u2022 '+(s.nom||s.libelle||'Site SIS')+' \u2014 '+(s.adresse||'')+'</div>');
+      });
+    }else{
+      grItems.push('<div style="margin:4px 0"><span class="tag tag-ok">SIS 0</span> Aucun secteur de sols pollues a proximite (500m)</div>');
+    }
+
+    /* Cavites */
+    var nbCav=grCavites&&grCavites.data?grCavites.data.length:0;
+    if(nbCav>0){
+      var cavCol=nbCav>3?'tag-ko':'tag-warn';
+      grItems.push('<div style="margin:4px 0"><span class="tag '+cavCol+'">Cavites '+nbCav+'</span> <strong>'+nbCav+' cavite(s) souterraine(s)</strong> dans un rayon de 1km</div>');
+    }else{
+      grItems.push('<div style="margin:4px 0"><span class="tag tag-ok">Cavites 0</span> Aucune cavite souterraine a proximite (1km)</div>');
+    }
+
+    /* MVT (mouvements de terrain) */
+    var nbMvt=grMVT&&grMVT.data?grMVT.data.length:0;
+    if(nbMvt>0){
+      var mvtCol=nbMvt>3?'tag-ko':'tag-warn';
+      grItems.push('<div style="margin:4px 0"><span class="tag '+mvtCol+'">MVT '+nbMvt+'</span> <strong>'+nbMvt+' mouvement(s) de terrain</strong> dans un rayon de 1km</div>');
+    }else{
+      grItems.push('<div style="margin:4px 0"><span class="tag tag-ok">MVT 0</span> Aucun mouvement de terrain a proximite (1km)</div>');
+    }
+
+    var geoUrl='https://www.georisques.gouv.fr/mes-risques/connaitre-les-risques-pres-de-chez-moi/rapport2?form-adresse=true&typeForm=adresse&lon='+lon+'&lat='+lat;
+    grItems.push('<div style="margin-top:6px;padding-top:4px;border-top:1px solid #eee"><a href="'+geoUrl+'" target="_blank" style="font-size:10px;color:#1a1a2e;font-weight:600">\ud83d\udcc4 Rapport complet Georisques \u2197</a></div>');
+
+    grEl.innerHTML=grH+grItems.join('');
+    grEl.style.display='';
 
     /* 4 PANELS */
     var h='';
@@ -579,7 +591,7 @@ async function run(){
     showErr('\u26a0 '+e);
   }finally{
     btn.disabled=false;btn.textContent='Analyser';
-    document.getElementById('prog-wrap').style.display='none';
+    document.getElentById('prog-wrap').style.display='none';
   }
 }
 </script>
