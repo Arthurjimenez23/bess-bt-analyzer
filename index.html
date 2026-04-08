@@ -41,7 +41,7 @@ window.addEventListener('DOMContentLoaded',function(){
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BESS BT â Qualification Parcelle</title>
+<title>BESS BT — Qualification Parcelle</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -114,8 +114,8 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 <body>
 <div id="gate">
 <div id="gate-box">
-<h2>BESS BT â Acces Protege</h2>
-<p>Groupe Wattet & Co â Outil interne</p>
+<h2>BESS BT — Acces Protege</h2>
+<p>Groupe Wattet & Co — Outil interne</p>
 <input type="password" id="gate-pw" placeholder="Mot de passe" autocomplete="off">
 <button onclick="unlock()">Entrer</button>
 <div id="gate-err"></div>
@@ -123,7 +123,7 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 </div>
 <div id="app-content">
 <div class="w">
-<h1>Qualification BESS BT â Analyse Parcelle</h1>
+<h1>Qualification BESS BT — Analyse Parcelle</h1>
 <p class="sub">Analyse automatique des 4 criteres d'eligibilite depuis le Geoportail de l'Urbanisme</p>
 <div class="row">
   <div class="g"><label>GPS (lat, lon)</label><input id="gps" value="43.590711, 2.209111" placeholder="48.8566, 2.3522"/></div>
@@ -144,7 +144,7 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 <div class="g4" id="g4"></div>
 <div class="plu-box" id="plu-box"></div>
 <div class="lk" id="lk"></div>
-<p class="fn" id="fn" style="display:none">Sources : API Carto IGN (GPU, Cadastre) Â· BAN Â· Georisques (GASPAR, Radon, CatNat, SIS, Cavites, MVT) Â· OSM â Analyse indicative, consultez le service urbanisme.</p>
+<p class="fn" id="fn" style="display:none">Sources : API Carto IGN (GPU, Cadastre) · BAN · Georisques (GASPAR, Radon, CatNat, SIS, Cavites, MVT) · OSM — Analyse indicative, consultez le service urbanisme.</p>
 </div>
 
 <script>
@@ -162,9 +162,9 @@ function prog(step){
 }
 function showErr(msg){var el=document.getElementById('err');el.innerHTML=msg;el.style.display=''}
 
-/* âââââ KEYWORD MATCHERS âââââ */
+/* ───── KEYWORD MATCHERS ───── */
 function isPPRI(t){t=(t||'').toLowerCase();
-  /* Only true flood/submersion PPRi â other natural risks go to isRiskSUP or informational */
+  /* Only true flood/submersion PPRi — other natural risks go to isRiskSUP or informational */
   return t.indexOf('inond')>-1||t.indexOf('ppri')>-1||t.indexOf('ppr ')>-1||
     t.indexOf('submers')>-1||t.indexOf('crue')>-1}
 
@@ -212,7 +212,7 @@ function norm(s){return(s||'').toLowerCase().replace(/[0-9]/g,'').replace(/\s+/g
 
 var COL={parc:'#3388ff',ppri:'#dc2626',abf:'#9333ea',cst:'#ea580c',plu:'#16a34a'};
 
-/* âââââ ICPE 2925 CLASSIFICATION âââââ */
+/* ───── ICPE 2925 CLASSIFICATION ───── */
 function getICPE(kwVal,batType){
   var kw=parseFloat(kwVal)||0;
   var isLi=(batType==='li');
@@ -223,18 +223,18 @@ function getICPE(kwVal,batType){
   var seuilA=isLi?600:50;
   if(kw<seuilD)return {regime:'NC',label:'Non classe ICPE',detail:'Puissance < '+seuilD+' kW (seuil declaration '+( isLi?'Li-ion':'Plomb')+')',color:'tag-ok'};
   if(kw<seuilA)return {regime:'D',label:'Declaration ICPE',detail:'Puissance '+kw+' kW entre '+seuilD+' et '+seuilA+' kW',color:'tag-warn'};
-  return {regime:'A',label:'Autorisation ICPE',detail:'Puissance '+kw+' kW >= '+seuilA+' kW â dossier complet requis',color:'tag-ko'};
+  return {regime:'A',label:'Autorisation ICPE',detail:'Puissance '+kw+' kW >= '+seuilA+' kW — dossier complet requis',color:'tag-ko'};
 }
 
-/* âââââ ARTICLE R.421-2 DISPENSE âââââ */
+/* ───── ARTICLE R.421-2 DISPENSE ───── */
 function getDispense(sfVal){
   var sf=parseFloat(sfVal)||0;
-  if(sf<=5)return {ok:true,label:'Dispense d\'autorisation',detail:'Surface '+sf+' m\u00b2 \u2264 5 m\u00b2 â Art. R.421-2 du Code de l\'urbanisme : dispense de formalite.',color:'tag-ok'};
-  if(sf<=20)return {ok:false,label:'Declaration prealable',detail:'Surface '+sf+' m\u00b2 entre 5 et 20 m\u00b2 â Declaration prealable obligatoire.',color:'tag-warn'};
-  return {ok:false,label:'Permis de construire',detail:'Surface '+sf+' m\u00b2 > 20 m\u00b2 â Permis de construire requis.',color:'tag-ko'};
+  if(sf<=5)return {ok:true,label:'Dispense d\'autorisation',detail:'Surface '+sf+' m\u00b2 \u2264 5 m\u00b2 — Art. R.421-2 du Code de l\'urbanisme : dispense de formalite.',color:'tag-ok'};
+  if(sf<=20)return {ok:false,label:'Declaration prealable',detail:'Surface '+sf+' m\u00b2 entre 5 et 20 m\u00b2 — Declaration prealable obligatoire.',color:'tag-warn'};
+  return {ok:false,label:'Permis de construire',detail:'Surface '+sf+' m\u00b2 > 20 m\u00b2 — Permis de construire requis.',color:'tag-ko'};
 }
 
-/* âââââ MAIN âââââ */
+/* ───── MAIN ───── */
 async function run(){
   var btn=document.getElementById('btn');btn.disabled=true;btn.textContent='Analyse en cours...';
   document.getElementById('err').style.display='none';
@@ -244,7 +244,7 @@ async function run(){
   document.getElementById('g4').innerHTML='';
 
   try{
-    /* ââ Parse GPS ââ */
+    /* ── Parse GPS ── */
     var raw=document.getElementById('gps').value.trim();
     /* Support Google Maps URL paste */
     var gm=raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
@@ -264,7 +264,7 @@ async function run(){
     var pwVal=document.getElementById('pw').value;
     var btType=document.getElementById('bt').value;
 
-    /* ââ Step 1: MAP ââ */
+    /* ── Step 1: MAP ── */
     st('Initialisation carte...');prog(1);
     if(typeof L==='undefined')throw 'Leaflet non charge. Verifiez votre connexion internet et rechargez la page.';
     if(map){map.remove();map=null}
@@ -276,7 +276,7 @@ async function run(){
     /* Force map to recalculate size after display:block */
     setTimeout(function(){if(map)map.invalidateSize()},100);
 
-    /* ââ Step 2: GEOCODE + PARCELLE (parallel) ââ */
+    /* ── Step 2: GEOCODE + PARCELLE (parallel) ── */
     st('Geocodage et parcelle cadastrale...');prog(2);
     var cadUrl='https://apicarto.ign.fr/api/cadastre/parcelle?geom='+encodeURIComponent(JSON.stringify({type:'Point',coordinates:[lon,lat]}));
     var revUrl='https://api-adresse.data.gouv.fr/reverse/?lon='+lon+'&lat='+lat+'&limit=1';
@@ -288,7 +288,7 @@ async function run(){
       addr=rp.label||'';commune=rp.citycode||'';comLabel=rp.city||'';postcode=rp.postcode||'';
     }
 
-    var sec='',num='',parcTxt='Non identifiee',parcGeom=null,parcArea='';
+    var sec='',num='',parcTxt='Non identifiee',parcGeom=null,pacArea='';
     if(cad&&cad.features&&cad.features[0]){
       var cf=cad.features[0],cp=cf.properties;
       sec=cp.section||'';num=cp.numero||'';
@@ -309,7 +309,7 @@ async function run(){
     if(addr)locH+='<br><span class="addr">'+addr+'</span>';
     locEl.innerHTML=locH;locEl.style.display='';
 
-    /* ââ Step 3: PLU ZONE ââ */
+    /* ── Step 3: PLU ZONE ── */
     st('Zonage PLU...');prog(3);
     var geomPt=encodeURIComponent(JSON.stringify({type:'Point',coordinates:[lon,lat]}));
     var plu=await J('https://apicarto.ign.fr/api/gpu/zone-urba?geom='+geomPt);
@@ -335,7 +335,7 @@ async function run(){
       if(zf.geometry)L.geoJSON(zf,{style:{color:COL.plu,weight:2,fillOpacity:0.08,fillColor:COL.plu,dashArray:'5 4'}}).addTo(map).bindPopup('Zone PLU: '+lib);
     }
 
-    /* ââ PLU FALLBACK: if no zone-urba, query municipality + document + secteur-cc ââ */
+    /* ── PLU FALLBACK: if no zone-urba, query municipality + document + secteur-cc ── */
     var munInfo=null;
     if(!zi){
       st('Recherche approfondie du document d\'urbanisme...');
@@ -371,22 +371,22 @@ async function run(){
       /* RNU: no PLU, no CC, no document */
       if(!zi&&munInfo&&munInfo.is_rnu){
         zi={code:'RNU',raw:'RNU',label:'Reglement National d\'Urbanisme',ok:0,
-            destdomi:'',libelong:'Commune soumise au RNU â pas de PLU ni carte communale. Constructibilite limitee aux parties actuellement urbanisees (PAU).',
+            destdomi:'',libelong:'Commune soumise au RNU — pas de PLU ni carte communale. Constructibilite limitee aux parties actuellement urbanisees (PAU).',
             nomfic:'',idurba:'',partition:'',typezone:'RNU'};
       }
     }
 
-    /* ââ Step 4: 9 GPU LAYERS (parallel) ââ */
+    /* ── Step 4: 9 GPU LAYERS (parallel) ── */
     st('Prescriptions et servitudes...');prog(4);
     var base='https://apicarto.ign.fr/api/gpu/';
     var layerNames=['prescription-surf','prescription-lin','prescription-pct','info-surf','info-lin','info-pct','assiette-sup-s','assiette-sup-l','assiette-sup-p'];
     var res=await Promise.all(layerNames.map(function(l){return J(base+l+'?geom='+geomPt)}));
 
-    /* ââ Step 5: GASPAR ââ */
+    /* ── Step 5: GASPAR ── */
     st('Risques naturels (GASPAR)...');prog(5);
     var gaspar=commune?await J('https://georisques.gouv.fr/api/v1/gaspar/risques?code_insee='+commune+'&rayon=0'):null;
 
-    /* ââ Step 6: GEORISQUES APIs (parallel) ââ */
+    /* ── Step 6: GEORISQUES APIs (parallel) ── */
     st('Georisques : radon, CatNat, cavites, sols pollues, seisme...');prog(6);
     var latlon=lat+','+lon;
     var [grRadon,grCatnat,grSIS,grCavites,grMVT]=await Promise.all([
@@ -397,7 +397,7 @@ async function run(){
       J('https://georisques.gouv.fr/api/v1/mvt?latlon='+latlon+'&rayon=1000')
     ]);
 
-    /* ââ Step 7: CLASSIFY ââ */
+    /* ── Step 7: CLASSIFY ── */
     st('Classification des resultats...');prog(7);
     var ppri=[],abf=[],cst=[],docs=[],risks=[];
     var seenPpri={},seenAbf={},seenCst={},seenDoc={};
@@ -442,9 +442,9 @@ async function run(){
     if(gaspar&&gaspar.data&&gaspar.data[0]&&gaspar.data[0].risques_detail){
       gaspar.data[0].risques_detail.forEach(function(r){
         var lib=r.libelle_risque_long||'';var nk=norm(lib);
-      if(lib.toLowerCase().indexOf('inondation')>-1){
-        if(!seenPpri[nk]){ppri.push('GASPAR: '+lib);seenPpri[nk]=true}
-      }
+        if(lib.toLowerCase().indexOf('inondation')>-1){
+          if(!seenPpri[nk]){ppri.push('GASPAR: '+lib);seenPpri[nk]=true}
+        }
         gasparRisks.push(lib);
       });
     }
@@ -471,7 +471,7 @@ async function run(){
     lg.innerHTML=lh;
     document.getElementById('mw').appendChild(lg);
 
-    /* ââ Step 8: RENDER ââ */
+    /* ── Step 8: RENDER ── */
     st('');prog(8);
 
     /* VERDICT */
@@ -548,9 +548,12 @@ async function run(){
       grItems.push('<div style="margin:4px 0"><span class="tag tag-ok">CatNat 0</span> Aucun arrete de catastrophe naturelle</div>');
     }
 
-    /* SIS (sols pollues) */
+    /* SIS (sols pollues) — /ssp returns {casias,instructions,conclusions_sis,conclusions_sup} */
     var sisData=[];
-    if(grSIS){if(grSIS.conclusions_sis&&grSIS.conclusions_sis.data)sisData=sisData.concat(grSIS.conclusions_sis.data);if(grSIS.casias&&grSIS.casias.data)sisData=sisData.concat(grSIS.casias.data);}
+    if(grSIS){
+      if(grSIS.conclusions_sis&&grSIS.conclusions_sis.data)sisData=sisData.concat(grSIS.conclusions_sis.data);
+      if(grSIS.casias&&grSIS.casias.data)sisData=sisData.concat(grSIS.casias.data);
+    }
     if(sisData.length>0){
       grItems.push('<div style="margin:4px 0"><span class="tag tag-ko">SIS '+sisData.length+'</span> <strong>Secteur d\'information sur les sols</strong> dans un rayon de 500m \u2014 sols potentiellement pollues</div>');
       sisData.slice(0,2).forEach(function(s){
