@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<!-- PASSWORD GATE -->
+<style id="gate-css">
+#gate{position:fixed;inset:0;z-index:99999;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif}
+#gate-box{background:#fff;border-radius:12px;padding:32px 28px;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+#gate-box h2{font-size:16px;color:#1a1a2e;margin-bottom:4px}
+#gate-box p{font-size:11px;color:#999;margin-bottom:16px}
+#gate-box input{width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:6px;font-size:14px;text-align:center;outline:none;transition:border .2s}
+#gate-box input:focus{border-color:#1a1a2e}
+#gate-box button{margin-top:10px;padding:10px 24px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;width:100%;transition:background .2s}
+#gate-box button:hover{background:#2a3a5e}
+#gate-err{color:#dc2626;font-size:11px;margin-top:8px;display:none}
+#app-content{display:none}
+</style>
+<script>
+var PWH='0d68c95206829ea932f35e103ba5b826e84c5f62fbe99c1a460d938339aebd45';
+async function sha256(m){var e=new TextEncoder().encode(m);var h=await crypto.subtle.digest('SHA-256',e);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+async function unlock(){
+  var pw=document.getElementById('gate-pw').value;
+  var h=await sha256(pw);
+  if(h===PWH){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app-content').style.display='block';
+    document.getElementById('gate-css').remove();
+    sessionStorage.setItem('bess-auth','1');
+  }else{
+    var e=document.getElementById('gate-err');e.textContent='Mot de passe incorrect';e.style.display='block';
+    document.getElementById('gate-pw').value='';document.getElementById('gate-pw').focus();
+  }
+}
+window.addEventListener('DOMContentLoaded',function(){
+  if(sessionStorage.getItem('bess-auth')==='1'){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app-content').style.display='block';
+    document.getElementById('gate-css').remove();
+  }
+  document.getElementById('gate-pw').addEventListener('keydown',function(e){if(e.key==='Enter')unlock()});
+});
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BESS BT — Qualification Parcelle</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>if(typeof L==='undefined')document.write('<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/scr'+'ipt>')</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;color:#333}
+.w{max-width:960px;margin:0 auto;padding:14px}
+h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
+.sub{text-align:center;font-size:10px;color:#999;margin-bottom:10px}
+.row{display:flex;gap:6px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
+.row label{font-size:9px;font-weight:700;color:#999;text-transform:uppercase;display:block;margin-bottom:1px}
+.row input,.row select{padding:7px 8px;border:1px solid #ccc;border-radius:5px;font-size:12px}
+.row .g{flex:2;min-width:180px}.row .g input{width:100%;font-weight:600}
+.row .s{width:80px}.row .s input,.row .s select{width:100%}
+.go{padding:7px 16px;background:#1a1a2e;color:#fff;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:12px;transition:background .2s}
+.go:hover{background:#2a3a5e}.go:disabled{background:#aaa;cursor:wait}
+
+/* Progress bar */
+#prog-wrap{display:none;margin-bottom:8px}
+#prog-bar{height:3px;background:#e0e0e0;border-radius:2px;overflow:hidden}
+#prog-fill{height:100%;width:0%;background:linear-gradient(90deg,#1a1a2e,#3b82f6);border-radius:2px;transition:width .3s ease}
+#st{text-align:center;font-size:11px;color:#999;min-height:16px;margin-bottom:2px}
+
+#err{color:#c00;text-align:center;font-size:12px;display:none;margin-bottom:6px;padding:8px;background:#fff0f0;border-radius:6px}
+
+/* Location banner */
+#loc{display:none;padding:8px 12px;background:#fff;border-radius:6px;margin-bottom:8px;font-size:11px;color:#555;border:1px solid #e0e0e0}
+#loc strong{color:#1a1a2e}
+#loc .addr{font-size:10px;color:#999}
+
+#mw{position:relative;display:none;margin-bottom:10px}
+#map{width:100%;height:460px;border-radius:8px;border:2px solid #ccc}
+.leg{position:absolute;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,.93);border-radius:6px;padding:6px 10px;font-size:10px;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+.leg div{display:flex;align-items:center;gap:4px;margin:1px 0}
+.leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+#vd{display:none;padding:12px;border-radius:6px;margin-bottom:10px;font-size:13px;text-align:center;font-weight:700}
+.g4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;display:none}
+@media(max-width:600px){.g4{grid-template-columns:1fr}}
+.c{background:#fff;border-radius:6px;padding:12px;border-left:4px solid #ccc}
+.c h3{font-size:12px;font-weight:700;margin-bottom:4px}
+.c .t{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-bottom:4px}
+.tok{background:#d4edda;color:#155724}.tko{background:#f8d7da;color:#721c24}.twn{background:#fff3cd;color:#856404}.tabf{background:#f3e8ff;color:#6b21a8}
+.c p{font-size:11px;color:#666;line-height:1.4;margin:2px 0}
+.c a{font-size:10px;color:#1a1a2e}
+.c .detail{font-size:10px;color:#888;margin-top:3px;padding-top:3px;border-top:1px solid #f0f0f0}
+
+/* ICPE + Urbanisme boxes */
+.info-box{background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:10px 12px;margin-bottom:8px;display:none;font-size:11px;color:#555}
+.info-box h4{font-size:11px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+.info-box .tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-right:4px}
+.info-box .tag-ok{background:#d4edda;color:#155724}
+.info-box .tag-warn{background:#fff3cd;color:#856404}
+.info-box .tag-ko{background:#f8d7da;color:#721c24}
+
+.lk{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;display:none}
+.lk a{font-size:10px;padding:3px 8px;background:#fff;border:1px solid #ddd;border-radius:10px;color:#333;text-decoration:none;transition:background .2s}
+.lk a:hover{background:#f0f0f0}
+
+.plu-box{background:#fff;border:2px solid #1a1a2e;border-radius:8px;padding:14px;margin-bottom:10px;display:none}
+.plu-box h3{font-size:13px;font-weight:700;margin-bottom:8px;color:#1a1a2e}
+.plu-box a{display:inline-block;padding:6px 14px;background:#1a1a2e;color:#fff;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;margin:3px 4px 3px 0;transition:background .2s}
+.plu-box a:hover{background:#2a3a5e}
+.plu-box .plu-info{font-size:10px;color:#888;margin-top:6px}
+
+.fn{font-size:9px;color:#aaa;text-align:center}
+</style>
+</head>
+<body>
+<div id="gate">
+<div id="gate-box">
+<h2>BESS BT — Acces Protege</h2>
+<p>Groupe Wattet & Co — Outil interne</p>
+<input type="password" id="gate-pw" placeholder="Mot de passe" autocomplete="off">
+<button onclick="unlock()">Entrer</button>
+<div id="gate-err"></div>
+</div>
+</div>
+<div id="app-content">
+<div class="w">
+<h1>Qualification BESS BT — Analyse Parcelle</h1>
+<p class="sub">Analyse automatique des 4 criteres d'eligibilite depuis le Geoportail de l'Urbanisme</p>
+<div class="row">
+  <div class="g"><label>GPS (lat, lon)</label><input id="gps" value="43.590711, 2.209111" placeholder="48.8566, 2.3522"/></div>
+  <div class="s"><label>m&sup2;</label><input id="sf" type="number" value="5" min="1" step="1"/></div>
+  <div class="s"><label>kW</label><input id="pw" type="number" value="500" min="1" step="10"/></div>
+  <div class="s"><label>Batterie</label><select id="bt"><option value="li">Li-ion</option><option value="pb">Plomb</option></select></div>
+  <button class="go" id="btn" onclick="run()">Analyser</button>
+</div>
+<div id="err"></div>
+<div id="prog-wrap"><div id="prog-bar"><div id="prog-fill"></div></div></div>
+<div id="st"></div>
+<div id="loc"></div>
+<div id="mw"><div id="map"></div></div>
+<div id="vd"></div>
+<div class="info-box" id="icpe-box"></div>
+<div class="info-box" id="urba-box"></div>
+<div class="g4" id="g4"></div>
+<div class="plu-box" id="plu-box"></div>
+<div class="lk" id="lk"></div>
+<p class="fn" id="fn" style="display:none">Sources : API Carto IGN (GPU, Cadastre) · BAN · Georisques/GASPAR · OSM — Analyse indicative, consultez le service urbanisme.</p>
+</div>
+
+<script>
+var map;
+var STEPS=7,curStep=0;
+
+/* Fetch with timeout + abort */
+async function J(u){try{var c=new AbortController(),t=setTimeout(function(){c.abort()},15000);var r=await fetch(u,{signal:c.signal});clearTimeout(t);if(!r.ok)return null;return await r.json()}catch(e){return null}}
+
+function st(t){document.getElementById('st').textContent=t}
+function prog(step){
+  curStep=step;
+  var pct=Math.min(100,Math.round(step/STEPS*100));
+  document.getElementById('prog-fill').style.width=pct+'%';
+}
+function showErr(msg){var el=document.getElementById('err');el.innerHTML=msg;el.style.display=''}
+
+/* ───── KEYWORD MATCHERS ───── */
+function isPPRI(t){t=(t||'').toLowerCase();
+  /* Only true flood/submersion PPRi — other natural risks go to isRiskSUP or informational */
+  return t.indexOf('inond')>-1||t.indexOf('ppri')>-1||t.indexOf('ppr ')>-1||
+    t.indexOf('submers')>-1||t.indexOf('crue')>-1}
+
+function isABFtext(t){t=(t||'').toLowerCase();
+  return t.indexOf('architecte des b')>-1||t.indexOf('architectes des b')>-1||
+    t.indexOf(' abf')>-1||t.indexOf('(abf)')>-1||
+    t.indexOf('monument historique')>-1||t.indexOf('monuments historiques')>-1||
+    t.indexOf('perimetre de protection')>-1||t.indexOf('zppaup')>-1||t.indexOf('avap')>-1||
+    t.indexOf('site patrimonial remarquable')>-1||t.indexOf('secteur sauvegard')>-1||
+    t.indexOf('servitude ac ')>-1||t.indexOf('sites et monuments')>-1||
+    t.indexOf('site inscrit')>-1||t.indexOf('site class')>-1
+}
+function isABF(txt,props){
+  if(isABFtext(txt))return true;
+  if(!props)return false;
+  var s=(props.suptype||'').toLowerCase();
+  return s==='ac1'||s==='ac2'||s==='ac3'||s==='ac4';
+}
+/* Natural risk servitudes: PM1/PM2/PM3 = risques naturels (informatif, ne bloque pas BESS) */
+function isRiskSUP(props){
+  if(!props)return false;
+  var s=(props.suptype||'').toLowerCase();
+  if(s==='pm1'||s==='pm2'||s==='pm3'||s==='pm1bis')return true;
+  /* Also detect by text: retrait-gonflement, argiles, mouvement terrain, etc. */
+  var t=((props.txt||'')+(props.libelle||'')+(props.nom||'')+(props.fichier||'')).toLowerCase();
+  return t.indexOf('retrait-gonflement')>-1||t.indexOf('retrait gonflement')>-1||
+    t.indexOf('argile')>-1||t.indexOf('mouvement de terrain')>-1;
+}
+
+function isConst(t){t=(t||'').toLowerCase();
+  /* Exclude natural risks: retrait-gonflement argiles = alea argiles, not construction setback */
+  if(t.indexOf('gonflement')>-1||t.indexOf('argile')>-1||t.indexOf('pprmt')>-1||t.indexOf('pprt')>-1)return false;
+  return (t.indexOf('retrait')>-1&&t.indexOf('gonflement')===-1)||t.indexOf('recul')>-1||
+    t.indexOf('hauteur max')>-1||t.indexOf('hauteur limit')>-1||
+    t.indexOf('hauteur plafond')>-1||t.indexOf('hauteur de')>-1||
+    t.indexOf('emprise au sol')>-1||t.indexOf('implantation')>-1||t.indexOf('marge de recul')>-1||
+    t.indexOf('prospect')>-1||t.indexOf('ebc')>-1||
+    t.indexOf('espace boise class')>-1||
+    t.indexOf('limite separativ')>-1||
+    t.indexOf('alignement')>-1||t.indexOf('gabarit')>-1||
+    t.indexOf('cos ')>-1||t.indexOf('coefficient')>-1
+}
+
+function norm(s){return(s||'').toLowerCase().replace(/[0-9]/g,'').replace(/\s+/g,' ').replace(/[^a-z\u00e0\u00e2\u00e4\u00e9\u00e8\u00ea\u00eb\u00ef\u00ee\u00f4\u00f9\u00fb\u00fc\u00ff\u00e7\u0153\u00e6 ]/g,'').trim().substring(0,60)}
+
+var COL={parc:'#3388ff',ppri:'#dc2626',abf:'#9333ea',cst:'#ea580c',plu:'#16a34a'};
+
+/* ───── ICPE 2925 CLASSIFICATION ───── */
+function getICPE(kwVal,batType){
+  var kw=parseFloat(kwVal)||0;
+  var isLi=(batType==='li');
+  /* Rubrique 2925 - Accumulateurs electriques */
+  /* Li-ion: D a partir de 100kW, A a partir de 600kW (seuil 1) */
+  /* Plomb:  D a partir de 10kW, A a partir de 50kW (seuil 1) */
+  var seuilD=isLi?100:10;
+  var seuilA=isLi?600:50;
+  if(kw<seuilD)return {regime:'NC',label:'Non classe ICPE',detail:'Puissance < '+seuilD+' kW (seuil declaration '+( isLi?'Li-ion':'Plomb')+')',color:'tag-ok'};
+  if(kw<seuilA)return {regime:'D',label:'Declaration ICPE',detail:'Puissance '+kw+' kW entre '+seuilD+' et '+seuilA+' kW',color:'tag-warn'};
+  return {regime:'A',label:'Autorisation ICPE',detail:'Puissance '+kw+' kW >= '+seuilA+' kW — dossier complet requis',color:'tag-ko'};
+}
+
+/* ───── ARTICLE R.421-2 DISPENSE ───── */
+function getDispense(sfVal){
+  var sf=parseFloat(sfVal)||0;
+  if(sf<=5)return {ok:true,label:'Dispense d\'autorisation',detail:'Surface '+sf+' m\u00b2 \u2264 5 m\u00b2 — Art. R.421-2 du Code de l\'urbanisme : dispense de formalite.',color:'tag-ok'};
+  if(sf<=20)return {ok:false,label:'Declaration prealable',detail:'Surface '+sf+' m\u00b2 entre 5 et 20 m\u00b2 — Declaration prealable obligatoire.',color:'tag-warn'};
+  return {ok:false,label:'Permis de construire',detail:'Surface '+sf+' m\u00b2 > 20 m\u00b2 — Permis de construire requis.',color:'tag-ko'};
+}
+
+/* ───── MAIN ───── */
+async function run(){
+  var btn=document.getElementById('btn');btn.disabled=true;btn.textContent='Analyse en cours...';
+  document.getElementById('err').style.display='none';
+  document.getElementById('prog-wrap').style.display='';
+  prog(0);
+  ['vd','g4','lk','fn','plu-box','loc','icpe-box','urba-box'].forEach(function(id){document.getElementById(id).style.display='none'});
+  document.getElementById('g4').innerHTML='';
+
+  try{
+    /* ── Parse GPS ── */
+    var raw=document.getElementById('gps').value.trim();
+    /* Support Google Maps URL paste */
+    var gm=raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    var p=gm?[gm[1],gm[2]]:raw.split(/[\s,;/|]+/).filter(Boolean);
+    if(p.length<2)throw 'Format: lat, lon (ou collez un lien Google Maps)';
+    var lat=parseFloat(p[0]),lon=parseFloat(p[1]);
+    if(isNaN(lat)||isNaN(lon))throw 'Coordonnees invalides';
+    /* Auto-swap if lat/lon reversed (DOM-TOM range) */
+    if(lat>-10&&lat<15&&lon>40&&lon<55){var t=lat;lat=lon;lon=t}
+    /* Sanity check: is this in metropolitan France? */
+    if(lat<41||lat>51.5||lon<-5.5||lon>10){
+      if(!(lat>-25&&lat<0&&lon>40&&lon<70)&&!(lat>10&&lat<20&&lon>-65&&lon>-60))
+        showErr('Attention : ce point semble hors de France metropolitaine. Les resultats peuvent etre incomplets.');
+    }
+
+    var sfVal=document.getElementById('sf').value;
+    var pwVal=document.getElementById('pw').value;
+    var btType=document.getElementById('bt').value;
+
+    /* ── Step 1: MAP ── */
+    st('Initialisation carte...');prog(1);
+    if(typeof L==='undefined')throw 'Leaflet non charge. Verifiez votre connexion internet et rechargez la page.';
+    if(map){map.remove();map=null}
+    var mw=document.getElementById('mw');
+    mw.style.display='block';
+    map=L.map('map',{zoomControl:true}).setView([lat,lon],18);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',subdomains:'abcd'}).addTo(map);
+    L.marker([lat,lon]).addTo(map).bindPopup('<b>Projet BESS</b><br>'+lat.toFixed(6)+', '+lon.toFixed(6)).openPopup();
+    /* Force map to recalculate size after display:block */
+    setTimeout(function(){if(map)map.invalidateSize()},100);
+
+    /* ── Step 2: GEOCODE + PARCELLE (parallel) ── */
+    st('Geocodage et parcelle cadastrale...');prog(2);
+    var cadUrl='https://apicarto.ign.fr/api/cadastre/parcelle?geom='+encodeURIComponent(JSON.stringify({type:'Point',coordinates:[lon,lat]}));
+    var revUrl='https://api-adresse.data.gouv.fr/reverse/?lon='+lon+'&lat='+lat+'&limit=1';
+    var [rev,cad]=await Promise.all([J(revUrl),J(cadUrl)]);
+
+    var addr='',commune='',comLabel='',postcode='';
+    if(rev&&rev.features&&rev.features[0]){
+      var rp=rev.features[0].properties;
+      addr=rp.label||'';commune=rp.citycode||'';comLabel=rp.city||'';postcode=rp.postcode||'';
+    }
+
+    var sec='',num='',parcTxt='Non identifiee',parcGeom=null,parcArea='';
+    if(cad&&cad.features&&cad.features[0]){
+      var cf=cad.features[0],cp=cf.properties;
+      sec=cp.section||'';num=cp.numero||'';
+      commune=cp.code_insee||commune;comLabel=cp.nom_com||comLabel;
+      parcTxt=sec+' '+num+' \u2014 '+(cp.nom_com||comLabel);
+      if(cp.contenance)parcArea=(cp.contenance/10000).toFixed(2)+' ha';
+      parcGeom=cf.geometry;
+      L.geoJSON(cf,{style:{color:COL.parc,weight:3,fillOpacity:0.05,fillColor:COL.parc}}).addTo(map).bindPopup('Parcelle '+sec+' '+num+(parcArea?' ('+parcArea+')':''));
+    }else{
+      showErr('Parcelle cadastrale non trouvee a ces coordonnees. Les resultats PLU/GPU restent valides au point GPS.');
+    }
+
+    /* Show location banner */
+    var locEl=document.getElementById('loc');
+    var locH='<strong>'+comLabel+(postcode?' ('+postcode+')':'')+'</strong>';
+    locH+=' \u2014 Parcelle '+sec+' '+num;
+    if(parcArea)locH+=' \u2014 '+parcArea;
+    if(addr)locH+='<br><span class="addr">'+addr+'</span>';
+    locEl.innerHTML=locH;locEl.style.display='';
+
+    /* ── Step 3: PLU ZONE ── */
+    st('Zonage PLU...');prog(3);
+    var geomPt=encodeURIComponent(JSON.stringify({type:'Point',coordinates:[lon,lat]}));
+    var plu=await J('https://apicarto.ign.fr/api/gpu/zone-urba?geom='+geomPt);
+    var zi=null,reglUrl=null;
+    if(plu&&plu.features&&plu.features[0]){
+      var zf=plu.features[0],zp=zf.properties;
+      var lib=zp.libelle||zp.libelong||zp.typezone||'';
+      var u=lib.toUpperCase().trim();
+      /* Zone classification: which zones are BESS-compatible? */
+      var ZR={UK:['Activites Eco',1],UX:['Activites Eco',1],UI:['Industrielle',1],UE:['Equipements',1],
+              UC:['Urbaine Mixte',1],UD:['Urbaine Diffuse',1],UF:['Ferroviaire/Transport',1],UP:['Port',1],
+              UA:['Centre-Ville',0],UB:['Residentielle',0],UH:['Habitat',0],
+              AU:['A Urbaniser',1],AUX:['A Urbaniser Eco',1],
+              A:['Agricole',0],N:['Naturelle',0]};
+      var code='?',label='Inconnu',ok=-1;
+      var ks=Object.keys(ZR).sort(function(a,b){return b.length-a.length});
+      for(var i=0;i<ks.length;i++){if(u.startsWith(ks[i])){code=ks[i];label=ZR[ks[i]][0];ok=ZR[ks[i]][1];break}}
+      if(code==='?'&&u.startsWith('U')){code='U';label='Urbaine';ok=1}
+      zi={code:code,raw:lib,label:label,ok:ok,destdomi:zp.destdomi,
+          libelong:zp.libelong||'',nomfic:zp.nomfic||'',idurba:zp.idurba||'',partition:zp.partition||'',
+          typezone:zp.typezone||''};
+      reglUrl=zp.urlfic||null;
+      if(zf.geometry)L.geoJSON(zf,{style:{color:COL.plu,weight:2,fillOpacity:0.08,fillColor:COL.plu,dashArray:'5 4'}}).addTo(map).bindPopup('Zone PLU: '+lib);
+    }
+
+    /* ── PLU FALLBACK: if no zone-urba, query municipality + document + secteur-cc ── */
+    var munInfo=null;
+    if(!zi){
+      st('Recherche approfondie du document d\'urbanisme...');
+      var [munData,docData,ccData]=await Promise.all([
+        J('https://apicarto.ign.fr/api/gpu/municipality?geom='+geomPt),
+        J('https://apicarto.ign.fr/api/gpu/document?geom='+geomPt),
+        J('https://apicarto.ign.fr/api/gpu/secteur-cc?geom='+geomPt)
+      ]);
+
+      /* Municipality: tells us if RNU */
+      if(munData&&munData.features&&munData.features[0]){
+        munInfo=munData.features[0].properties;
+      }
+
+      /* Carte communale fallback */
+      if(ccData&&ccData.features&&ccData.features[0]){
+        var ccp=ccData.features[0].properties;
+        var ccLib=ccp.libelle||ccp.typesect||'Carte communale';
+        var ccOk=(ccp.typesect||'').toUpperCase()==='ZC'?1:0; /* ZC=constructible, ZN=naturelle */
+        zi={code:'CC',raw:ccLib,label:'Carte communale'+(ccOk?' (constructible)':' (non constructible)'),ok:ccOk,
+            destdomi:'',libelong:ccp.libelong||'',nomfic:ccp.nomfic||'',idurba:ccp.idurba||'',partition:'',typezone:'CC'};
+        if(ccData.features[0].geometry)L.geoJSON(ccData.features[0],{style:{color:COL.plu,weight:2,fillOpacity:0.08,fillColor:COL.plu,dashArray:'5 4'}}).addTo(map).bindPopup('Carte communale: '+ccLib);
+      }
+
+      /* Document: check for PLUi or other docs */
+      if(!zi&&docData&&docData.features&&docData.features.length>0){
+        var df=docData.features[0].properties;
+        var typedoc=df.typedoc||'';
+        zi={code:typedoc,raw:typedoc,label:typedoc+(df.etat?' ('+df.etat+')':''),ok:-1,
+            destdomi:'',libelong:df.nom||'',nomfic:'',idurba:df.idurba||'',partition:'',typezone:typedoc};
+      }
+
+      /* RNU: no PLU, no CC, no document */
+      if(!zi&&munInfo&&munInfo.is_rnu){
+        zi={code:'RNU',raw:'RNU',label:'Reglement National d\'Urbanisme',ok:0,
+            destdomi:'',libelong:'Commune soumise au RNU — pas de PLU ni carte communale. Constructibilite limitee aux parties actuellement urbanisees (PAU).',
+            nomfic:'',idurba:'',partition:'',typezone:'RNU'};
+      }
+    }
+
+    /* ── Step 4: 9 GPU LAYERS (parallel) ── */
+    st('Prescriptions et servitudes...');prog(4);
+    var base='https://apicarto.ign.fr/api/gpu/';
+    var layerNames=['prescription-surf','prescription-lin','prescription-pct','info-surf','info-lin','info-pct','assiette-sup-s','assiette-sup-l','assiette-sup-p'];
+    var res=await Promise.all(layerNames.map(function(l){return J(base+l+'?geom='+geomPt)}));
+
+    /* ── Step 5: GASPAR ── */
+    st('Risques naturels (GASPAR)...');prog(5);
+    var gaspar=commune?await J('https://georisques.gouv.fr/api/v1/gaspar/risques?code_insee='+commune+'&rayon=0'):null;
+
+    /* ── Step 6: CLASSIFY ── */
+    st('Classification des resultats...');prog(6);
+    var ppri=[],abf=[],cst=[],docs=[],risks=[];
+    var seenPpri={},seenAbf={},seenCst={},seenDoc={};
+    if(reglUrl){docs.push(reglUrl);seenDoc[reglUrl]=true}
+
+    var ppriGeoms=[],abfGeoms=[],cstGeoms=[];
+    var totalFeatures=0;
+
+    res.forEach(function(data,layerIdx){
+      if(!data||!data.features)return;
+      totalFeatures+=data.features.length;
+      data.features.forEach(function(f){
+        var pr=f.properties||{};
+        var txt=pr.txt||pr.libelle||pr.nom||'';
+        var suptype=(pr.suptype||'').toLowerCase();
+        var label=txt;
+        if(!label&&suptype)label='Servitude '+suptype.toUpperCase()+(pr.fichier?' \u2014 '+pr.fichier.replace(/_/g,' ').replace(/\.pdf$/i,''):'');
+        if(!label||label.length<2)return;
+        var nkey=norm(label);
+
+        if(pr.urlfic&&!seenDoc[pr.urlfic]){docs.push(pr.urlfic);seenDoc[pr.urlfic]=true}
+
+        /* Priority: PPRi(flood) > risk SUP(PM1=info) > ABF > constraint */
+        if(isPPRI(label)){
+          if(!seenPpri[nkey]){seenPpri[nkey]=true;ppri.push(label)}
+          if(f.geometry)ppriGeoms.push(f);
+        }else if(isRiskSUP(pr)){
+          /* PM1/PM2 = natural risk info, shown but doesn't affect score */
+          if(!seenPpri[nkey]){seenPpri[nkey]=true;risks.push(label)}
+        }else if(isABF(label,pr)){
+          if(!seenAbf[nkey]){seenAbf[nkey]=true;abf.push(label)}
+          if(f.geometry)abfGeoms.push(f);
+        }else if(isConst(label)){
+          if(!seenCst[nkey]){seenCst[nkey]=true;cst.push(label)}
+          if(f.geometry)cstGeoms.push(f);
+        }
+      });
+    });
+
+    /* GASPAR: enrich PPRi + detect other risks */
+    var gasparRisks=[];
+    if(gaspar&&gaspar.data)gaspar.data.forEach(function(r){
+      var lib=r.libelle_risque_jo||'';var nk=norm(lib);
+      if(lib.toLowerCase().indexOf('inondation')>-1){
+        if(!seenPpri[nk]){ppri.push('GASPAR: '+lib);seenPpri[nk]=true}
+      }
+      gasparRisks.push(lib);
+    });
+
+    /* Draw on map */
+    if(ppriGeoms.length>0)L.geoJSON(ppriGeoms[0],{style:{color:COL.ppri,weight:2.5,fillColor:COL.ppri,fillOpacity:0.3}}).addTo(map).bindPopup('<b style="color:#dc2626">Zone PPRi</b>');
+    if(abfGeoms.length>0)L.geoJSON(abfGeoms[0],{style:{color:COL.abf,weight:2.5,fillColor:COL.abf,fillOpacity:0.2}}).addTo(map).bindPopup('<b style="color:#9333ea">Perimetre ABF</b>');
+    if(cstGeoms.length>0)L.geoJSON(cstGeoms[0],{style:{color:COL.cst,weight:2,fillColor:COL.cst,fillOpacity:0.15}}).addTo(map).bindPopup('<b style="color:#ea580c">Contrainte</b>');
+
+    /* Fit map */
+    var allB=[];
+    map.eachLayer(function(l){if(l.getBounds)allB.push(l)});
+    if(allB.length>0){var b=L.latLngBounds([]);allB.forEach(function(l){try{b.extend(l.getBounds())}catch(e){}});b.extend([lat,lon]);try{map.fitBounds(b.pad(0.08))}catch(e){}}
+    setTimeout(function(){if(map)map.invalidateSize()},200);
+
+    /* Legend */
+    var oldL=document.querySelector('.leg');if(oldL)oldL.remove();
+    var lg=document.createElement('div');lg.className='leg';
+    var lh='<div><i style="background:'+COL.parc+'"></i> Parcelle '+sec+' '+num+'</div>';
+    if(zi)lh+='<div><i style="background:'+COL.plu+'"></i> Zone '+zi.raw+'</div>';
+    if(ppri.length)lh+='<div><i style="background:'+COL.ppri+'"></i> PPRi</div>';
+    if(abf.length)lh+='<div><i style="background:'+COL.abf+'"></i> ABF</div>';
+    if(cst.length)lh+='<div><i style="background:'+COL.cst+'"></i> Contraintes</div>';
+    lg.innerHTML=lh;
+    document.getElementById('mw').appendChild(lg);
+
+    /* ── Step 7: RENDER ── */
+    st('');prog(7);
+
+    /* VERDICT */
+    var ppriOk=ppri.length===0,abfOk=abf.length===0,pluOk=zi&&zi.ok===1,cstOk=cst.length===0;
+    var score=(ppriOk?1:0)+(pluOk?1:0)+(cstOk?1:0)+(abfOk?1:0);
+    var vd=document.getElementById('vd');
+    vd.style.display='';
+    vd.style.background=score>=4?'#d4edda':score>=2?'#fff3cd':'#f8d7da';
+    vd.style.border='2px solid '+(score>=4?'#28a745':score>=2?'#ffc107':'#dc3545');
+    vd.style.color=score>=4?'#155724':score>=2?'#856404':'#721c24';
+    vd.textContent=(score>=4?'\u2705 Eligible':score>=2?'\u26a0\ufe0f Sous reserve':'\u274c Defavorable')+' \u2014 '+parcTxt+' \u2014 '+score+'/4';
+
+    /* ICPE box */
+    var icpe=getICPE(pwVal,btType);
+    var icpeEl=document.getElementById('icpe-box');
+    icpeEl.innerHTML='<h4>Rubrique ICPE 2925 \u2014 Accumulateurs</h4>'+
+      '<span class="tag '+icpe.color+'">'+icpe.regime+'</span> '+icpe.label+
+      '<br><span style="font-size:10px;color:#888">'+icpe.detail+'</span>';
+    icpeEl.style.display='';
+
+    /* Urbanisme box */
+    var disp=getDispense(sfVal);
+    var urbaEl=document.getElementById('urba-box');
+    urbaEl.innerHTML='<h4>Droit de l\'urbanisme \u2014 Art. R.421-2</h4>'+
+      '<span class="tag '+disp.color+'">'+(disp.ok?'Dispense':'Requis')+'</span> '+disp.label+
+      '<br><span style="font-size:10px;color:#888">'+disp.detail+'</span>';
+    urbaEl.style.display='';
+
+    /* 4 PANELS */
+    var h='';
+    var gpuMapUrl='https://www.geoportail-urbanisme.gouv.fr/map/#tile=1&lon='+lon+'&lat='+lat+'&zoom=19&mlon='+lon+'&mlat='+lat;
+
+    /* 1. PPRi */
+    h+='<div class="c" style="border-left-color:'+(ppriOk?'#16a34a':'#dc2626')+'">';
+    h+='<h3>1. PPRi / Risques naturels</h3>';
+    if(ppriOk){h+='<span class="t tok">Aucun PPRi</span><p>Pas de zone inondable sur cette parcelle.</p>'}
+    else{h+='<span class="t tko">'+ppri.length+' PPRi</span>';ppri.forEach(function(t){h+='<p>\u2192 '+t+'</p>'});h+='<p style="color:#dc2626;font-size:10px;font-weight:600">Zone rouge sur la carte</p>'}
+    if(risks.length>0){
+      h+='<div class="detail" style="margin-top:4px"><strong>Risques informatifs :</strong>';
+      risks.forEach(function(r){h+='<br>\u2022 '+r});
+      h+='<br><span style="color:#888;font-size:9px">Informatif \u2014 ne bloque pas l\'eligibilite BESS</span></div>';
+    }
+    if(gasparRisks.length>0){
+      h+='<div class="detail"><strong>Risques GASPAR ('+comLabel+') :</strong> ';
+      h+=gasparRisks.slice(0,5).join(', ');
+      if(gasparRisks.length>5)h+=' (+' +(gasparRisks.length-5)+' autres)';
+      h+='</div>';
+    }
+    h+='</div>';
+
+    /* 2. PLU / Document d'urbanisme */
+    h+='<div class="c" style="border-left-color:'+(pluOk?'#16a34a':zi?((zi.code==='RNU'||zi.ok===0)?'#dc2626':'#ca8a04'):'#ca8a04')+'">';
+    h+='<h3>2. Document d\'urbanisme</h3>';
+    if(zi){
+      var ziColor=zi.ok===1?'tok':zi.ok===0?'tko':'twn';
+      h+='<span class="t '+ziColor+'">'+zi.raw+' \u2014 '+zi.label+'</span>';
+      if(zi.libelong)h+='<p>'+zi.libelong+'</p>';
+      if(zi.typezone&&zi.typezone!=='RNU'&&zi.typezone!=='CC')h+='<p style="font-size:10px;color:#888">Type : '+zi.typezone+(zi.destdomi?' \u2014 Destination : '+zi.destdomi:'')+'</p>';
+      if(zi.code==='RNU'){
+        h+='<p style="color:#dc2626;font-weight:600">Commune sous RNU \u2014 pas de PLU.</p>';
+        h+='<p>Constructibilite limitee aux PAU (parties actuellement urbanisees). Etude au cas par cas necessaire.</p>';
+      }else{
+        h+='<p>'+(zi.ok===1?'Compatible BESS.':zi.ok===0?'Deconseille BESS.':'Verification manuelle necessaire.')+'</p>';
+      }
+      h+='<p><a href="'+gpuMapUrl+'" target="_blank" style="font-weight:700;font-size:11px">\ud83d\udce5 Ouvrir sur Geoportail Urbanisme \u2197</a></p>';
+      if(zi.nomfic)h+='<p style="font-size:9px;color:#aaa">Reglement : '+zi.nomfic+'</p>';
+    }else{
+      h+='<span class="t twn">Non disponible</span>';
+      h+='<p>Aucun document d\'urbanisme trouve (ni PLU, ni CC, ni RNU). Contactez la mairie de '+comLabel+'.</p>';
+      h+='<p><a href="'+gpuMapUrl+'" target="_blank" style="font-size:11px">Consulter le Geoportail Urbanisme \u2197</a></p>';
+    }
+    if(munInfo)h+='<div class="detail">Commune : '+munInfo.name+' ('+munInfo.insee+')'+( munInfo.is_rnu?' \u2014 RNU':'')+(!munInfo.is_rnu&&zi&&zi.idurba?' \u2014 Doc: '+zi.idurba:'')+'</div>';
+    h+='</div>';
+
+    /* 3. Reglements */
+    h+='<div class="c" style="border-left-color:'+(cstOk?'#16a34a':'#ea580c')+'">';
+    h+='<h3>3. Contraintes de constructibilite</h3>';
+    if(cstOk){h+='<span class="t tok">RAS</span><p>Aucune contrainte specifique sur la parcelle.</p>'}
+    else{h+='<span class="t twn">'+cst.length+'</span>';cst.forEach(function(t){h+='<p>\u2192 '+t+'</p>'})}
+    if(docs.length>0){h+='<p>';docs.forEach(function(u,i){h+='<a href="'+u+'" target="_blank">Reglement '+(i+1)+' \u2197</a> '});h+='</p>'}
+    h+='<div class="detail">'+totalFeatures+' entite(s) GPU analysee(s) sur 9 couches</div>';
+    h+='</div>';
+
+    /* 4. ABF */
+    h+='<div class="c" style="border-left-color:'+(abfOk?'#16a34a':'#9333ea')+'">';
+    h+='<h3>4. Protections ABF</h3>';
+    if(abfOk){h+='<span class="t tok">Hors perimetre</span><p>Aucune protection ABF.</p>'}
+    else{h+='<span class="t tabf">'+abf.length+'</span>';abf.forEach(function(t){h+='<p>\u2192 '+t+'</p>'});h+='<p style="color:#9333ea;font-size:10px;font-weight:600">Avis ABF obligatoire (+1 mois)</p>'}
+    h+='</div>';
+
+    document.getElementById('g4').innerHTML=h;document.getElementById('g4').style.display='grid';
+
+    /* PLU Documents section */
+    var pluBox=document.getElementById('plu-box');
+    var ph='<h3>\ud83d\udcc4 Acces au PLU'+(zi?' \u2014 Zone '+zi.raw:'')+'</h3>';
+    var allDocs=[];
+    if(reglUrl)allDocs.push(reglUrl);
+    docs.forEach(function(u){if(allDocs.indexOf(u)===-1)allDocs.push(u)});
+    if(allDocs.length>0){
+      allDocs.forEach(function(u,i){
+        var fname=u.split('/').pop()||('Document '+(i+1));
+        ph+='<a href="'+u+'" target="_blank">\ud83d\udce5 '+fname+'</a>';
+      });
+    }
+    ph+='<a href="'+gpuMapUrl+'" target="_blank" style="background:#0f3460">\ud83d\udce5 Telecharger le reglement PLU (Geoportail Urbanisme)</a>';
+    if(zi&&zi.nomfic)ph+='<div class="plu-info">Fichier reglement : <strong>'+zi.nomfic+'</strong>'+(zi.idurba?' \u2014 Document : '+zi.idurba:'')+'<br>Cliquez sur le lien ci-dessus, puis cliquez sur la zone coloree de votre parcelle pour acceder au PDF du reglement.</div>';
+    else ph+='<div class="plu-info">Cliquez sur le lien ci-dessus, puis cliquez sur la zone coloree de votre parcelle pour acceder au PDF du reglement.</div>';
+    pluBox.innerHTML=ph;pluBox.style.display='';
+
+    /* Links */
+    var gpu='https://www.geoportail-urbanisme.gouv.fr/map/#tile=1&lon='+lon+'&lat='+lat+'&zoom=19&mlon='+lon+'&mlat='+lat;
+    var geo='https://www.georisques.gouv.fr/mes-risques/connaitre-les-risques-pres-de-chez-moi/rapport?lon='+lon+'&lat='+lat+'&isCadastre=true';
+    var ign='https://www.geoportail.gouv.fr/carte?c='+lon+','+lat+'&z=18&l0=CADASTRALPARCELS.PARCELS.O::GEOPORTAIL:OGC:WMTS(1)&permalink=yes';
+    document.getElementById('lk').innerHTML='<a href="'+gpu+'" target="_blank">Geoportail Urbanisme \u2197</a><a href="'+geo+'" target="_blank">Georisques \u2197</a><a href="'+ign+'" target="_blank">Geoportail IGN + Cadastre \u2197</a>';
+    document.getElementById('lk').style.display='flex';
+    document.getElementById('fn').style.display='';
+
+  }catch(e){
+    showErr('\u26a0 '+e);
+  }finally{
+    btn.disabled=false;btn.textContent='Analyser';
+    document.getElementById('prog-wrap').style.display='none';
+  }
+}
+</script>
+</div><!-- /app-content -->
+</body>
+</html>
