@@ -569,7 +569,7 @@ async function run(){
 
     /* Links */
     var gpu='https://www.geoportail-urbanisme.gouv.fr/map/#tile=1&lon='+lon+'&lat='+lat+'&zoom=19&mlon='+lon+'&mlat='+lat;
-    var geo='https://www.georisques.gouv.fr/mes-risques/connaitre-les-risques-pres-de-chez-moi/rapport?lon='+lon+'&lat='+lat+'&isCadastre=true';
+    var geo='https://www.georisques.gouv.fr/cartes-interactives#/dossiers/PPRn?center='+lon+','+lat+'&zoom=15';
     var ign='https://www.geoportail.gouv.fr/carte?c='+lon+','+lat+'&z=18&l0=CADASTRALPARCELS.PARCELS.O::GEOPORTAIL:OGC:WMTS(1)&permalink=yes';
     document.getElementById('lk').innerHTML='<a href="'+gpu+'" target="_blank">Geoportail Urbanisme \u2197</a><a href="'+geo+'" target="_blank">Georisques \u2197</a><a href="'+ign+'" target="_blank">Geoportail IGN + Cadastre \u2197</a>';
     document.getElementById('lk').style.display='flex';
