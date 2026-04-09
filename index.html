@@ -106,7 +106,7 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 .plu-box h3{font-size:13px;font-weight:700;margin-bottom:8px;color:#1a1a2e}
 .plu-box a{display:inline-block;padding:6px 14px;background:#1a1a2e;color:#fff;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;margin:3px 4px 3px 0;transition:background .2s}
 .plu-box a:hover{background:#2a3a5e}
-.plu-box .plu-info{font-size:10px;color:#888;margin-top:6px;padding-top:3px;border-top:1px solid #f0f0f0}
+.plu-box .plu-info{font-size:10px;color:#888;margin-top:6px}
 
 .fn{font-size:9px;color:#aaa;text-align:center}
 </style>
@@ -624,7 +624,23 @@ async function run(){
         h+='<p>'+(zi.ok===1?'Compatible BESS.':zi.ok===0?'Deconseille BESS.':'Verification manuelle necessaire.')+'</p>';
       }
       h+='<p><a href="'+gpuMapUrl+'" target="_blank" style="font-weight:700;font-size:11px">\ud83d\udce5 Ouvrir sur Geoportail Urbanisme \u2197</a></p>';
+      /* Direct PLU regulation links */
+      var pluLinks=[];
+      if(reglUrl)pluLinks.push(reglUrl);
+      docs.forEach(function(u){if(pluLinks.indexOf(u)===-1)pluLinks.push(u)});
+      if(pluLinks.length>0){
+        h+='<div style="margin:4px 0 2px;padding:5px 8px;background:#f0f7ff;border:1px solid #d0e0f0;border-radius:5px">';
+        h+='<div style="font-size:9px;font-weight:700;color:#1a1a2e;margin-bottom:3px">\ud83d\udcc4 Reglement PLU :</div>';
+        pluLinks.forEach(function(u,i){
+          var fname=u.split('/').pop()||('Document '+(i+1));
+          fname=fname.replace(/_/g,' ').replace(/\.pdf$/i,'');
+          if(fname.length>45)fname=fname.substring(0,42)+'...';
+          h+='<a href="'+u+'" target="_blank" style="display:block;font-size:10px;color:#1a1a2e;margin:2px 0;text-decoration:underline">\u2192 '+fname+'</a>';
+        });
+        h+='</div>';
+      }
       if(zi.nomfic)h+='<p style="font-size:9px;color:#aaa">Reglement : '+zi.nomfic+'</p>';
+      h+='<p style="font-size:8px;color:#bbb;margin-top:4px;font-style:italic">\u26a0 Le PLU reste toujours a verifier aupres du service urbanisme de la commune.</p>';
     }else{
       h+='<span class="t twn">Non disponible</span>';
       h+='<p>Aucun document d\'urbanisme trouve (ni PLU, ni CC, ni RNU). Contactez la mairie de '+comLabel+'.</p>';
