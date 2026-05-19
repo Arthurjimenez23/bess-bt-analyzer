@@ -199,9 +199,6 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 <p class="sub">Analyse automatique des 4 criteres d'eligibilite depuis le Geoportail de l'Urbanisme</p>
 <div class="row">
   <div class="g"><label>GPS (lat, lon)</label><input id="gps" value="43.590711, 2.209111" placeholder="48.8566, 2.3522"/></div>
-  <div class="s"><label>m&sup2;</label><input id="sf" type="number" value="5" min="1" step="1"/></div>
-  <div class="s"><label>kW</label><input id="pw" type="number" value="500" min="1" step="10"/></div>
-  <div class="s"><label>Batterie</label><select id="bt"><option value="li">Li-ion</option><option value="pb">Plomb</option></select></div>
   <button class="go" id="btn" onclick="run()">Analyser</button>
 </div>
 <div id="err"></div>
@@ -210,8 +207,6 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 <div id="loc"></div>
 <div id="mw"><div id="map"></div></div>
 <div id="vd"></div>
-<div class="info-box" id="icpe-box"></div>
-<div class="info-box" id="urba-box"></div>
 <div class="info-box" id="georisques-box"></div>
 <div class="g4" id="g4"></div>
 <div class="plu-box" id="plu-box"></div>
@@ -284,35 +279,13 @@ function norm(s){return(s||'').toLowerCase().replace(/[0-9]/g,'').replace(/\s+/g
 
 var COL={parc:'#3388ff',ppri:'#dc2626',abf:'#9333ea',cst:'#ea580c',plu:'#16a34a'};
 
-/* ───── ICPE 2925 CLASSIFICATION ───── */
-function getICPE(kwVal,batType){
-  var kw=parseFloat(kwVal)||0;
-  var isLi=(batType==='li');
-  /* Rubrique 2925 - Accumulateurs electriques */
-  /* Li-ion: D a partir de 100kW, A a partir de 600kW (seuil 1) */
-  /* Plomb:  D a partir de 10kW, A a partir de 50kW (seuil 1) */
-  var seuilD=isLi?100:10;
-  var seuilA=isLi?600:50;
-  if(kw<seuilD)return {regime:'NC',label:'Non classe ICPE',detail:'Puissance < '+seuilD+' kW (seuil declaration '+( isLi?'Li-ion':'Plomb')+')',color:'tag-ok'};
-  if(kw<seuilA)return {regime:'D',label:'Declaration ICPE',detail:'Puissance '+kw+' kW entre '+seuilD+' et '+seuilA+' kW',color:'tag-warn'};
-  return {regime:'A',label:'Autorisation ICPE',detail:'Puissance '+kw+' kW >= '+seuilA+' kW — dossier complet requis',color:'tag-ko'};
-}
-
-/* ───── ARTICLE R.421-2 DISPENSE ───── */
-function getDispense(sfVal){
-  var sf=parseFloat(sfVal)||0;
-  if(sf<=5)return {ok:true,label:'Dispense d\'autorisation',detail:'Surface '+sf+' m\u00b2 \u2264 5 m\u00b2 — Art. R.421-2 du Code de l\'urbanisme : dispense de formalite.',color:'tag-ok'};
-  if(sf<=20)return {ok:false,label:'Declaration prealable',detail:'Surface '+sf+' m\u00b2 entre 5 et 20 m\u00b2 — Declaration prealable obligatoire.',color:'tag-warn'};
-  return {ok:false,label:'Permis de construire',detail:'Surface '+sf+' m\u00b2 > 20 m\u00b2 — Permis de construire requis.',color:'tag-ko'};
-}
-
 /* ───── MAIN ───── */
 async function run(){
   var btn=document.getElementById('btn');btn.disabled=true;btn.textContent='Analyse en cours...';
   document.getElementById('err').style.display='none';
   document.getElementById('prog-wrap').style.display='';
   prog(0);
-  ['vd','g4','lk','fn','plu-box','loc','icpe-box','urba-box','georisques-box'].forEach(function(id){document.getElementById(id).style.display='none'});
+  ['vd','g4','lk','fn','plu-box','loc','georisques-box'].forEach(function(id){document.getElementById(id).style.display='none'});
   document.getElementById('g4').innerHTML='';
 
   try{
@@ -331,10 +304,6 @@ async function run(){
       if(!(lat>-25&&lat<0&&lon>40&&lon<70)&&!(lat>10&&lat<20&&lon>-65&&lon>-60))
         showErr('Attention : ce point semble hors de France metropolitaine. Les resultats peuvent etre incomplets.');
     }
-
-    var sfVal=document.getElementById('sf').value;
-    var pwVal=document.getElementById('pw').value;
-    var btType=document.getElementById('bt').value;
 
     /* ── Step 1: MAP ── */
     st('Initialisation carte...');prog(1);
@@ -555,22 +524,6 @@ async function run(){
     vd.style.border='2px solid '+(score>=4?'#28a745':score>=2?'#ffc107':'#dc3545');
     vd.style.color=score>=4?'#155724':score>=2?'#856404':'#721c24';
     vd.textContent=(score>=4?'\u2705 Eligible':score>=2?'\u26a0\ufe0f Sous reserve':'\u274c Defavorable')+' \u2014 '+parcTxt+' \u2014 '+score+'/4';
-
-    /* ICPE box */
-    var icpe=getICPE(pwVal,btType);
-    var icpeEl=document.getElementById('icpe-box');
-    icpeEl.innerHTML='<h4>Rubrique ICPE 2925 \u2014 Accumulateurs</h4>'+
-      '<span class="tag '+icpe.color+'">'+icpe.regime+'</span> '+icpe.label+
-      '<br><span style="font-size:10px;color:#888">'+icpe.detail+'</span>';
-    icpeEl.style.display='';
-
-    /* Urbanisme box */
-    var disp=getDispense(sfVal);
-    var urbaEl=document.getElementById('urba-box');
-    urbaEl.innerHTML='<h4>Droit de l\'urbanisme \u2014 Art. R.421-2</h4>'+
-      '<span class="tag '+disp.color+'">'+(disp.ok?'Dispense':'Requis')+'</span> '+disp.label+
-      '<br><span style="font-size:10px;color:#888">'+disp.detail+'</span>';
-    urbaEl.style.display='';
 
     /* Georisques box */
     var grEl=document.getElementById('georisques-box');
