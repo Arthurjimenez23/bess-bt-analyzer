@@ -63,32 +63,33 @@ function msLogin() {
   document.getElementById('ms-login-btn').disabled = true;
   document.getElementById('gate-loading').style.display = 'block';
   document.getElementById('gate-err').style.display = 'none';
-  /* Attendre que initialize() soit terminé avant de rediriger */
   msalReadyPromise.then(function() {
-    return msalInstance.loginRedirect(loginRequest);
+    return msalInstance.loginPopup(loginRequest);
+  }).then(function(response) {
+    if (response && response.account) {
+      showApp(response.account);
+    }
   }).catch(function(err) {
     showGateError('Erreur : ' + (err.message || err));
+    document.getElementById('ms-login-btn').disabled = false;
+    document.getElementById('gate-loading').style.display = 'none';
   });
 }
 
 function msLogout() {
-  msalInstance.logoutRedirect({ postLogoutRedirectUri: window.location.origin + window.location.pathname });
+  var accounts = msalInstance.getAllAccounts();
+  msalInstance.logoutPopup({ account: accounts[0] || null });
 }
 
 window.addEventListener('DOMContentLoaded', function() {
   msalReadyPromise = msalInstance.initialize().then(function() {
-    return msalInstance.handleRedirectPromise();
-  }).then(function(response) {
-    var account = response ? response.account : null;
-    if (!account) {
-      var accounts = msalInstance.getAllAccounts();
-      if (accounts.length > 0) account = accounts[0];
-    }
-    if (account) {
-      showApp(account);
+    /* Vérifier si une session est déjà active */
+    var accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      showApp(accounts[0]);
     }
   }).catch(function(err) {
-    showGateError('Erreur d\'authentification : ' + (err.message || err));
+    showGateError('Erreur d\'initialisation : ' + (err.message || err));
   });
 });
 </script>
