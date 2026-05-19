@@ -42,7 +42,6 @@ function showApp(account) {
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
   document.getElementById('gate-css').remove();
-  /* Afficher le nom de l'utilisateur connecté */
   var userBar = document.getElementById('user-bar');
   if (userBar && account) {
     userBar.textContent = account.name || account.username;
@@ -55,14 +54,17 @@ function showGateError(msg) {
   el.textContent = msg;
   el.style.display = 'block';
   document.getElementById('gate-loading').style.display = 'none';
-  document.getElementById('ms-login-btn').disabled = false;
+  var btn = document.getElementById('ms-login-btn');
+  if (btn) btn.disabled = false;
 }
 
 function msLogin() {
   document.getElementById('ms-login-btn').disabled = true;
   document.getElementById('gate-loading').style.display = 'block';
   document.getElementById('gate-err').style.display = 'none';
-  msalInstance.loginRedirect(loginRequest);
+  msalInstance.loginRedirect(loginRequest).catch(function(err) {
+    showGateError('Erreur : ' + (err.message || err));
+  });
 }
 
 function msLogout() {
@@ -70,7 +72,10 @@ function msLogout() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  msalInstance.handleRedirectPromise().then(function(response) {
+  /* initialize() est requis dans MSAL.js 2.x avant tout appel */
+  msalInstance.initialize().then(function() {
+    return msalInstance.handleRedirectPromise();
+  }).then(function(response) {
     var account = response ? response.account : null;
     if (!account) {
       var accounts = msalInstance.getAllAccounts();
@@ -79,7 +84,6 @@ window.addEventListener('DOMContentLoaded', function() {
     if (account) {
       showApp(account);
     }
-    /* Si pas connecté, la porte reste visible */
   }).catch(function(err) {
     showGateError('Erreur d\'authentification Microsoft : ' + (err.message || err));
   });
