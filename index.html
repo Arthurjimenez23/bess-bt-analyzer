@@ -37,6 +37,7 @@ var msalConfig = {
 
 var loginRequest = { scopes: ['User.Read'] };
 var msalInstance = new msal.PublicClientApplication(msalConfig);
+var msalReadyPromise = null;
 
 function showApp(account) {
   document.getElementById('gate').style.display = 'none';
@@ -62,7 +63,10 @@ function msLogin() {
   document.getElementById('ms-login-btn').disabled = true;
   document.getElementById('gate-loading').style.display = 'block';
   document.getElementById('gate-err').style.display = 'none';
-  msalInstance.loginRedirect(loginRequest).catch(function(err) {
+  /* Attendre que initialize() soit terminé avant de rediriger */
+  msalReadyPromise.then(function() {
+    return msalInstance.loginRedirect(loginRequest);
+  }).catch(function(err) {
     showGateError('Erreur : ' + (err.message || err));
   });
 }
@@ -72,8 +76,7 @@ function msLogout() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  /* initialize() est requis dans MSAL.js 2.x avant tout appel */
-  msalInstance.initialize().then(function() {
+  msalReadyPromise = msalInstance.initialize().then(function() {
     return msalInstance.handleRedirectPromise();
   }).then(function(response) {
     var account = response ? response.account : null;
@@ -85,7 +88,7 @@ window.addEventListener('DOMContentLoaded', function() {
       showApp(account);
     }
   }).catch(function(err) {
-    showGateError('Erreur d\'authentification Microsoft : ' + (err.message || err));
+    showGateError('Erreur d\'authentification : ' + (err.message || err));
   });
 });
 </script>
