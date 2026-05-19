@@ -36,7 +36,7 @@ var msalConfig = {
 };
 
 var loginRequest = { scopes: ['User.Read'] };
-var msalInstance = new msal.PublicClientApplication(msalConfig);
+var msalInstance = null;
 var msalReadyPromise = null;
 
 function showApp(account) {
@@ -60,6 +60,10 @@ function showGateError(msg) {
 }
 
 function msLogin() {
+  if (!msalReadyPromise) {
+    showGateError('Librairie Microsoft non chargée. Vérifiez votre connexion et rechargez la page.');
+    return;
+  }
   document.getElementById('ms-login-btn').disabled = true;
   document.getElementById('gate-loading').style.display = 'block';
   document.getElementById('gate-err').style.display = 'none';
@@ -71,25 +75,31 @@ function msLogin() {
     }
   }).catch(function(err) {
     showGateError('Erreur : ' + (err.message || err));
-    document.getElementById('ms-login-btn').disabled = false;
-    document.getElementById('gate-loading').style.display = 'none';
   });
 }
 
 function msLogout() {
+  if (!msalInstance) return;
   var accounts = msalInstance.getAllAccounts();
   msalInstance.logoutPopup({ account: accounts[0] || null });
 }
 
 window.addEventListener('DOMContentLoaded', function() {
+  if (typeof msal === 'undefined') {
+    showGateError('Impossible de charger la librairie Microsoft Authentication. Vérifiez votre connexion internet et rechargez la page.');
+    return;
+  }
+  try {
+    msalInstance = new msal.PublicClientApplication(msalConfig);
+  } catch(e) {
+    showGateError('Erreur de configuration : ' + e.message);
+    return;
+  }
   msalReadyPromise = msalInstance.initialize().then(function() {
-    /* Vérifier si une session est déjà active */
     var accounts = msalInstance.getAllAccounts();
-    if (accounts.length > 0) {
-      showApp(accounts[0]);
-    }
+    if (accounts.length > 0) showApp(accounts[0]);
   }).catch(function(err) {
-    showGateError('Erreur d\'initialisation : ' + (err.message || err));
+    showGateError('Erreur d\'initialisation Microsoft : ' + (err.message || err));
   });
 });
 </script>
