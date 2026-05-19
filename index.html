@@ -2,42 +2,87 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<!-- PASSWORD GATE -->
+<!-- MICROSOFT AUTHENTICATION (MSAL.js) -->
+<!-- TODO: Remplacez CLIENT_ID et TENANT_ID ci-dessous par vos valeurs Azure AD -->
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <style id="gate-css">
 #gate{position:fixed;inset:0;z-index:99999;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif}
-#gate-box{background:#fff;border-radius:12px;padding:32px 28px;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+#gate-box{background:#fff;border-radius:12px;padding:32px 28px;width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+#gate-box .logo{width:40px;height:40px;margin:0 auto 12px;display:block}
 #gate-box h2{font-size:16px;color:#1a1a2e;margin-bottom:4px}
-#gate-box p{font-size:11px;color:#999;margin-bottom:16px}
-#gate-box input{width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:6px;font-size:14px;text-align:center;outline:none;transition:border .2s}
-#gate-box input:focus{border-color:#1a1a2e}
-#gate-box button{margin-top:10px;padding:10px 24px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;width:100%;transition:background .2s}
-#gate-box button:hover{background:#2a3a5e}
-#gate-err{color:#dc2626;font-size:11px;margin-top:8px;display:none}
+#gate-box p{font-size:11px;color:#999;margin-bottom:20px}
+#gate-box .ms-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:10px 16px;background:#fff;color:#5e5e5e;border:1px solid #8c8c8c;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,box-shadow .15s}
+#gate-box .ms-btn:hover{background:#f3f3f3;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+#gate-box .ms-btn:disabled{opacity:.6;cursor:wait}
+#gate-box .ms-btn svg{flex-shrink:0}
+#gate-err{color:#dc2626;font-size:11px;margin-top:12px;display:none;padding:8px;background:#fff0f0;border-radius:6px}
+#gate-loading{font-size:11px;color:#999;margin-top:12px;display:none}
 #app-content{display:none}
 </style>
 <script>
-var PWH='0d68c95206829ea932f35e103ba5b826e84c5f62fbe99c1a460d938339aebd45';
-async function sha256(m){var e=new TextEncoder().encode(m);var h=await crypto.subtle.digest('SHA-256',e);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-async function unlock(){
-  var pw=document.getElementById('gate-pw').value;
-  var h=await sha256(pw);
-  if(h===PWH){
-    document.getElementById('gate').style.display='none';
-    document.getElementById('app-content').style.display='block';
-    document.getElementById('gate-css').remove();
-    sessionStorage.setItem('bess-auth','1');
-  }else{
-    var e=document.getElementById('gate-err');e.textContent='Mot de passe incorrect';e.style.display='block';
-    document.getElementById('gate-pw').value='';document.getElementById('gate-pw').focus();
+var MSAL_CLIENT_ID = 'YOUR_CLIENT_ID';
+var MSAL_TENANT_ID = 'YOUR_TENANT_ID';
+
+var msalConfig = {
+  auth: {
+    clientId: MSAL_CLIENT_ID,
+    authority: 'https://login.microsoftonline.com/' + MSAL_TENANT_ID,
+    redirectUri: window.location.origin + window.location.pathname
+  },
+  cache: {
+    cacheLocation: 'sessionStorage',
+    storeAuthStateInCookie: false
+  }
+};
+
+var loginRequest = { scopes: ['User.Read'] };
+var msalInstance = new msal.PublicClientApplication(msalConfig);
+
+function showApp(account) {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app-content').style.display = 'block';
+  document.getElementById('gate-css').remove();
+  /* Afficher le nom de l'utilisateur connecté */
+  var userBar = document.getElementById('user-bar');
+  if (userBar && account) {
+    userBar.textContent = account.name || account.username;
+    userBar.style.display = 'inline';
   }
 }
-window.addEventListener('DOMContentLoaded',function(){
-  if(sessionStorage.getItem('bess-auth')==='1'){
-    document.getElementById('gate').style.display='none';
-    document.getElementById('app-content').style.display='block';
-    document.getElementById('gate-css').remove();
-  }
-  document.getElementById('gate-pw').addEventListener('keydown',function(e){if(e.key==='Enter')unlock()});
+
+function showGateError(msg) {
+  var el = document.getElementById('gate-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('gate-loading').style.display = 'none';
+  document.getElementById('ms-login-btn').disabled = false;
+}
+
+function msLogin() {
+  document.getElementById('ms-login-btn').disabled = true;
+  document.getElementById('gate-loading').style.display = 'block';
+  document.getElementById('gate-err').style.display = 'none';
+  msalInstance.loginRedirect(loginRequest);
+}
+
+function msLogout() {
+  msalInstance.logoutRedirect({ postLogoutRedirectUri: window.location.origin + window.location.pathname });
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  msalInstance.handleRedirectPromise().then(function(response) {
+    var account = response ? response.account : null;
+    if (!account) {
+      var accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) account = accounts[0];
+    }
+    if (account) {
+      showApp(account);
+    }
+    /* Si pas connecté, la porte reste visible */
+  }).catch(function(err) {
+    showGateError('Erreur d\'authentification Microsoft : ' + (err.message || err));
+  });
 });
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,14 +159,23 @@ h1{font-size:17px;text-align:center;margin-bottom:4px;color:#1a1a2e}
 <body>
 <div id="gate">
 <div id="gate-box">
-<h2>BESS BT — Acces Protege</h2>
-<p>Groupe Wattet & Co — Outil interne</p>
-<input type="password" id="gate-pw" placeholder="Mot de passe" autocomplete="off">
-<button onclick="unlock()">Entrer</button>
+<!-- Microsoft logo SVG -->
+<svg class="logo" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+<h2>BESS BT — Accès sécurisé</h2>
+<p>Watt&amp;Co — Outil interne<br>Connexion via votre compte Microsoft</p>
+<button class="ms-btn" id="ms-login-btn" onclick="msLogin()">
+  <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+  Se connecter avec Microsoft
+</button>
+<div id="gate-loading">Connexion en cours…</div>
 <div id="gate-err"></div>
 </div>
 </div>
 <div id="app-content">
+<div style="background:#1a1a2e;color:#ccc;font-size:11px;text-align:right;padding:4px 16px;display:flex;justify-content:flex-end;align-items:center;gap:12px">
+  <span id="user-bar" style="display:none"></span>
+  <button onclick="msLogout()" style="background:transparent;border:1px solid #555;color:#ccc;border-radius:4px;padding:2px 10px;font-size:10px;cursor:pointer">Déconnexion</button>
+</div>
 <div class="w">
 <h1>Qualification BESS BT — Analyse Parcelle</h1>
 <p class="sub">Analyse automatique des 4 criteres d'eligibilite depuis le Geoportail de l'Urbanisme</p>
